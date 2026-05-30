@@ -4,6 +4,7 @@
   "version": "3.11.7",
   "app": {
     "withGlobalTauri": true,
+    "devtools": true,
     "trayIcon": {
       "iconPath": "png/weekly_512.png",
       "iconAsTemplate": false,
