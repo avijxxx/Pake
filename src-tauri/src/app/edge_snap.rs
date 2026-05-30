@@ -1,10 +1,10 @@
 #![cfg(target_os = "windows")]
 
-use crate::app::config::WindowConfig;
 use std::sync::atomic::{AtomicI32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
+
 use tauri::{PhysicalPosition, Position, WebviewWindow, WindowEvent};
 use windows::Win32::Foundation::{LPARAM, LRESULT, POINT, WPARAM};
 use windows::Win32::Graphics::Gdi::{
@@ -14,6 +14,8 @@ use windows::Win32::UI::WindowsAndMessaging::{
     CallNextHookEx, DispatchMessageW, GetMessageW, SetWindowsHookExW, TranslateMessage,
     UnhookWindowsHookEx, HHOOK, MSLLHOOKSTRUCT, WH_MOUSE_LL, WM_QUIT,
 };
+
+use crate::app::config::WindowConfig;
 
 const HOT_ZONE_PX: i32 = 10;
 const EXPAND_ANIMATION_MS: u64 = 200;
@@ -616,3 +618,4 @@ mod tests {
         assert_eq!(c, 1.0);
     }
 }
+
