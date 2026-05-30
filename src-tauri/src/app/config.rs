@@ -36,6 +36,14 @@ pub struct WindowConfig {
     pub min_height: f64,
     #[serde(default)]
     pub ignore_certificate_errors: bool,
+    #[serde(default)]
+    pub edge_snap_enabled: bool,
+    #[serde(default = "default_edge_snap_threshold")]
+    pub edge_snap_threshold: u32,
+    #[serde(default = "default_edge_snap_peek_width")]
+    pub edge_snap_peek_width: u32,
+    #[serde(default = "default_edge_snap_delay")]
+    pub edge_snap_delay: u32,
 }
 
 fn default_zoom() -> u32 {
@@ -85,6 +93,18 @@ pub struct PakeConfig {
     pub multi_instance: bool,
     #[serde(default)]
     pub multi_window: bool,
+}
+
+fn default_edge_snap_threshold() -> u32 {
+    20
+}
+
+fn default_edge_snap_peek_width() -> u32 {
+    5
+}
+
+fn default_edge_snap_delay() -> u32 {
+    1000
 }
 
 impl PakeConfig {

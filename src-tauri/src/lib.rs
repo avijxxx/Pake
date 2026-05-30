@@ -9,6 +9,9 @@ use tauri_plugin_window_state::StateFlags;
 #[cfg(target_os = "macos")]
 use std::time::Duration;
 
+#[cfg(target_os = "windows")]
+use app::edge_snap::{EdgeSnapConfig, EdgeSnapManager};
+
 const WINDOW_SHOW_DELAY: u64 = 50;
 
 use app::{
@@ -116,6 +119,18 @@ pub fn run_app() {
             )?;
             set_global_shortcut(app.app_handle(), activation_shortcut, init_fullscreen)?;
 
+            #[cfg(target_os = "windows")]
+            {
+                let window_config = pake_config
+                    .windows
+                    .first()
+                    .expect("At least one window configuration is required");
+                let edge_snap_config = EdgeSnapConfig::from_window_config(window_config);
+                let edge_snap_manager =
+                    EdgeSnapManager::new(window.clone(), edge_snap_config);
+                app.manage(edge_snap_manager);
+            }
+
             // Show window after state restoration to prevent position flashing
             // Unless start_to_tray is enabled, then keep it hidden
             if !start_to_tray {
@@ -145,6 +160,12 @@ pub fn run_app() {
             Ok(())
         })
         .on_window_event(move |_window, _event| {
+            #[cfg(target_os = "windows")]
+            {
+                let manager: tauri::State<EdgeSnapManager> = _window.app_handle().state();
+                manager.handle_window_event(&_event);
+            }
+
             if let tauri::WindowEvent::CloseRequested { api, .. } = _event {
                 if hide_on_close && _window.label() == "pake" {
                     // Hide window when hide_on_close is enabled (regardless of tray status)
