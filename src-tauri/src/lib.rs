@@ -126,8 +126,7 @@ pub fn run_app() {
                     .first()
                     .expect("At least one window configuration is required");
                 let edge_snap_config = EdgeSnapConfig::from_window_config(window_config);
-                let edge_snap_manager =
-                    EdgeSnapManager::new(window.clone(), edge_snap_config);
+                let edge_snap_manager = EdgeSnapManager::new(window.clone(), edge_snap_config);
                 app.manage(edge_snap_manager);
             }
 

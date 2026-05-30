@@ -618,4 +618,3 @@ mod tests {
         assert_eq!(c, 1.0);
     }
 }
-
