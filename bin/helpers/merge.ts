@@ -339,10 +339,12 @@ async function injectCustomCode(
     const files = injectArray.map((filepath) =>
       path.isAbsolute(filepath) ? filepath : path.join(process.cwd(), filepath),
     );
-    tauriConf.pake.inject = files;
+    // Merge CLI --inject files with existing scripts from pake.json (e.g., CI auto-login)
+    tauriConf.pake.inject = [...(tauriConf.pake.inject || []), ...files];
     await combineFiles(files, injectFilePath);
   } else {
-    tauriConf.pake.inject = [];
+    // Preserve existing inject scripts from pake.json (e.g., CI auto-login)
+    tauriConf.pake.inject = tauriConf.pake.inject || [];
     await fsExtra.writeFile(injectFilePath, '');
   }
 

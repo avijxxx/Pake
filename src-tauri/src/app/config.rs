@@ -93,6 +93,8 @@ pub struct PakeConfig {
     pub multi_instance: bool,
     #[serde(default)]
     pub multi_window: bool,
+    #[serde(default)]
+    pub inject: Vec<String>,
 }
 
 fn default_edge_snap_threshold() -> u32 {

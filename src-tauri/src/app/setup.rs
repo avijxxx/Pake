@@ -112,24 +112,36 @@ pub fn set_global_shortcut(
     shortcut: String,
     _init_fullscreen: bool,
 ) -> tauri::Result<()> {
-    if shortcut.is_empty() {
+    let activation_shortcut = if shortcut.is_empty() {
+        None
+    } else {
+        match Shortcut::from_str(&shortcut) {
+            Ok(s) => Some(s),
+            Err(error) => {
+                eprintln!("[Pake] Invalid activation shortcut '{shortcut}': {error}");
+                None
+            }
+        }
+    };
+
+    #[cfg(debug_assertions)]
+    let devtools_shortcut = Shortcut::from_str("Ctrl+Shift+I").ok();
+    #[cfg(not(debug_assertions))]
+    let devtools_shortcut: Option<Shortcut> = None;
+
+    if activation_shortcut.is_none() && devtools_shortcut.is_none() {
         return Ok(());
     }
 
     let app_handle = app.clone();
-    let shortcut_hotkey = match Shortcut::from_str(&shortcut) {
-        Ok(s) => s,
-        Err(error) => {
-            eprintln!("[Pake] Invalid activation shortcut '{shortcut}': {error}");
-            return Ok(());
-        }
-    };
     let last_triggered = Arc::new(Mutex::new(Instant::now()));
 
     if let Err(error) = app_handle.plugin(
         tauri_plugin_global_shortcut::Builder::new()
             .with_handler({
                 let last_triggered = Arc::clone(&last_triggered);
+                let activation_sc = activation_shortcut.clone();
+                let devtools_sc = devtools_shortcut.clone();
                 move |app, event, _shortcut| {
                     let Ok(mut last_triggered) = last_triggered.lock() else {
                         return;
@@ -139,17 +151,32 @@ pub fn set_global_shortcut(
                     }
                     *last_triggered = Instant::now();
 
-                    if shortcut_hotkey.eq(event) {
-                        if let Some(window) = app.get_webview_window("pake") {
-                            let is_visible = window.is_visible().unwrap_or(false);
-                            if is_visible {
-                                let _ = window.hide();
-                            } else {
-                                let _ = window.show();
-                                let _ = window.set_focus();
-                                #[cfg(target_os = "linux")]
-                                if _init_fullscreen && !window.is_fullscreen().unwrap_or(false) {
-                                    let _ = window.set_fullscreen(true);
+                    if let Some(ref sc) = activation_sc {
+                        if sc.eq(event) {
+                            if let Some(window) = app.get_webview_window("pake") {
+                                let is_visible = window.is_visible().unwrap_or(false);
+                                if is_visible {
+                                    let _ = window.hide();
+                                } else {
+                                    let _ = window.show();
+                                    let _ = window.set_focus();
+                                    #[cfg(target_os = "linux")]
+                                    if _init_fullscreen && !window.is_fullscreen().unwrap_or(false) {
+                                        let _ = window.set_fullscreen(true);
+                                    }
+                                }
+                            }
+                            return;
+                        }
+                    }
+
+                    if let Some(ref sc) = devtools_sc {
+                        if sc.eq(event) {
+                            if let Some(window) = app.get_webview_window("pake") {
+                                if window.is_devtools_open() {
+                                    let _ = window.close_devtools();
+                                } else {
+                                    window.open_devtools();
                                 }
                             }
                         }
@@ -159,13 +186,24 @@ pub fn set_global_shortcut(
             .build(),
     ) {
         eprintln!(
-            "[Pake] Failed to register global shortcut plugin '{shortcut}': {error}; continuing without it."
+            "[Pake] Failed to register global shortcut plugin: {error}; continuing without it."
         );
         return Ok(());
     }
 
-    if let Err(error) = app.global_shortcut().register(shortcut_hotkey) {
-        eprintln!("[Pake] Failed to bind global shortcut '{shortcut}': {error}");
+    if let Some(ref sc) = activation_shortcut {
+        if let Err(error) = app.global_shortcut().register(sc.clone()) {
+            eprintln!("[Pake] Failed to bind activation shortcut '{shortcut}': {error}");
+        }
+    }
+
+    #[cfg(debug_assertions)]
+    {
+        if let Some(ref sc) = devtools_shortcut {
+            if let Err(error) = app.global_shortcut().register(sc.clone()) {
+                eprintln!("[Pake] Failed to bind devtools shortcut: {error}");
+            }
+        }
     }
 
     Ok(())

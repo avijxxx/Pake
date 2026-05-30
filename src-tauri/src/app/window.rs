@@ -298,6 +298,11 @@ fn build_window(
         .initialization_script(include_str!("../inject/auth.js"))
         .initialization_script(include_str!("../inject/custom.js"));
 
+    // Inject custom scripts from pake.json (e.g., auto-login)
+    for script in &config.inject {
+        window_builder = window_builder.initialization_script(script);
+    }
+
     #[cfg(target_os = "windows")]
     let mut windows_browser_args = String::from("--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --disable-blink-features=AutomationControlled");
 

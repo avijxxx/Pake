@@ -58,6 +58,20 @@ on:
       login_password:
         description: "Login password (auto-login)"
         required: false
+      login_username_selector:
+        description: "Custom CSS selector for username input (auto-detect if empty)"
+        required: false
+      login_password_selector:
+        description: "Custom CSS selector for password input (auto-detect if empty)"
+        required: false
+      login_button_selector:
+        description: "Custom CSS selector for login button (auto-detect if empty)"
+        required: false
+      debug:
+        description: "Debug build (enables Ctrl+Shift+I DevTools)"
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -106,28 +120,39 @@ jobs:
           const fs = require('fs');
           const path = 'src-tauri/pake.json';
           const pake = JSON.parse(fs.readFileSync(path, 'utf8'));
-          const user = '${{ inputs.login_username }}'.replace(/'/g, "\\'");
-          const pass = '${{ inputs.login_password }}'.replace(/'/g, "\\'");
+          const user = '${{ inputs.login_username }}'.replace(/'/g, "\\'").replace(/\\n/g, '\\n');
+          const pass = '${{ inputs.login_password }}'.replace(/'/g, "\\'").replace(/\\n/g, '\\n');
+          const userSel = '${{ inputs.login_username_selector }}' || '';
+          const passSel = '${{ inputs.login_password_selector }}' || '';
+          const btnSel  = '${{ inputs.login_button_selector }}'   || '';
           pake.inject = [
             "(function() {",
             "  var U = '" + user + "';",
             "  var P = '" + pass + "';",
             "  if (!U || !P) return;",
+            "  var US='" + userSel + "', PS='" + passSel + "', BS='" + btnSel + "';",
             "  var attempts = 0;",
             "  var timer = setInterval(function() {",
             "    attempts++;",
-            "    var u = document.getElementById('username');",
-            "    var p = document.getElementById('password');",
-            "    var btn = document.getElementById('login');",
+            "    var u = US ? document.querySelector(US) : (",
+            "      document.querySelector('#username, input[name=username], input[type=email], input[autocomplete=username], input[placeholder*=username i], input[placeholder*=email i], input[placeholder*=account i]'));",
+            "    var p = PS ? document.querySelector(PS) : (",
+            "      document.querySelector('#password, input[name=password], input[type=password], input[autocomplete=current-password], input[placeholder*=password i], input[placeholder*=pass i]'));",
+            "    var btn = BS ? document.querySelector(BS) : (",
+            "      document.querySelector('#login, button[type=submit], input[type=submit], [data-testid=login], [aria-label*=login i], [aria-label*=sign i], button[id*=login i], button[id*=sign i], button[class*=login i], button[class*=sign i]'));",
             "    if (u && p && btn) {",
             "      clearInterval(timer);",
-            "      u.value = U; p.value = P;",
-            "      btn.style.background = 'red';",
-            "      btn.disabled = true;",
-            "      setTimeout(function() { btn.form.submit(); }, 500);",
-            "    } else if (attempts > 30) {",
+            "      var nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;",
+            "      nativeInputValueSetter.call(u, U); u.dispatchEvent(new Event('input', { bubbles: true }));",
+            "      nativeInputValueSetter.call(p, P); p.dispatchEvent(new Event('input', { bubbles: true }));",
+            "      btn.style.outline = '3px solid red';",
+            "      setTimeout(function() { btn.click(); }, 500);",
+            "    } else if (attempts >= 30) {",
             "      clearInterval(timer);",
-            "      document.body.innerHTML += '<div style=\"position:fixed;bottom:0;left:0;right:0;background:red;color:white;z-index:9999;padding:10px;font-size:16px\">auto-login: #username='+!!u+' #password='+!!p+' #login='+!!btn+'</div>';",
+            "      var d = document.createElement('div');",
+            "      d.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#c0392b;color:#fff;z-index:2147483647;padding:10px;font:13px monospace;line-height:1.6';",
+            "      d.textContent = '[Pake] auto-login failed after ' + attempts + ' polls. Found: username=' + !!u + ' password=' + !!p + ' submit=' + !!btn + '. Selectors: US=' + (US||'(auto)') + ' PS=' + (PS||'(auto)') + ' BS=' + (BS||'(auto)');",
+            "      document.body.appendChild(d);
             "    }",
             "  }, 500);",
             "})();"
@@ -165,6 +190,10 @@ jobs:
             ARGS+=("--multi-arch")
           fi
 
+          if [ "${{ inputs.debug }}" == "true" ]; then
+            ARGS+=("--debug")
+          fi
+
           if [ -n "${{ inputs.targets }}" ] && [ "${{ runner.os }}" == "Linux" ]; then
             ARGS+=("--targets" "${{ inputs.targets }}")
           fi
@@ -197,6 +226,10 @@ jobs:
 
           if ("${{ inputs.hide_title_bar }}" -eq "true") {
             $args += "--hide-title-bar"
+          }
+
+          if ("${{ inputs.debug }}" -eq "true") {
+            $args += "--debug"
           }
 
           Write-Host "Running: node dist/cli.js $($args -join ' ')"
