@@ -52,6 +52,12 @@ on:
         description: "Package formats (comma-separated: deb,appimage,rpm)"
         required: false
         default: "deb"
+      login_username:
+        description: "Login username (auto-login)"
+        required: false
+      login_password:
+        description: "Login password (auto-login)"
+        required: false
 
 jobs:
   build:
@@ -92,6 +98,36 @@ jobs:
             ~/.cargo/git/db/
             src-tauri/target/
           key: ${{ runner.os }}-cargo-pake-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Setup login credentials
+        if: inputs.login_username != '' && inputs.login_password != ''
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const path = 'src-tauri/pake.json';
+          const pake = JSON.parse(fs.readFileSync(path, 'utf8'));
+          const user = '${{ inputs.login_username }}'.replace(/'/g, "\\'");
+          const pass = '${{ inputs.login_password }}'.replace(/'/g, "\\'");
+          pake.inject = [
+            "(function() {",
+            "  var U = '" + user + "';",
+            "  var P = '" + pass + "';",
+            "  if (!U || !P) return;",
+            "  function doLogin() {",
+            "    var u = document.getElementById('username');",
+            "    var p = document.getElementById('password');",
+            "    var btn = document.getElementById('login');",
+            "    if (u && p && btn) {",
+            "      u.value = U; p.value = P;",
+            "      setTimeout(function() { btn.disabled = true; btn.form.submit(); }, 300);",
+            "    }",
+            "  }",
+            "  if (document.readyState === 'loading')",
+            "    document.addEventListener('DOMContentLoaded', doLogin);",
+            "  else doLogin();",
+            "})();"
+          ];
+          fs.writeFileSync(path, JSON.stringify(pake, null, 2) + '\n');
 
       - name: Build App (Linux/macOS)
         if: runner.os != 'Windows'
