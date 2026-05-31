@@ -5,13 +5,19 @@ use crate::util::{
 use std::{
     path::PathBuf,
     str::FromStr,
-    sync::atomic::{AtomicU32, Ordering},
+    sync::{
+        atomic::{AtomicU32, Ordering},
+        Mutex,
+    },
 };
 use tauri::{
     webview::{DownloadEvent, NewWindowFeatures, NewWindowResponse},
     AppHandle, Config, Manager, Url, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
 };
 use tauri_plugin_dialog::DialogExt;
+
+// Store the last download directory chosen by the user
+static LAST_DOWNLOAD_DIR: Mutex<Option<PathBuf>> = Mutex::new(None);
 
 #[cfg(target_os = "macos")]
 use tauri::{Theme, TitleBarStyle};
@@ -458,12 +464,19 @@ fn build_window(
                         if let Some(window) = download_handle.get_webview_window("pake") {
                             let (tx, rx) = std::sync::mpsc::channel();
 
+                            // Use last download directory if available, otherwise use default
+                            let default_dir = LAST_DOWNLOAD_DIR
+                                .lock()
+                                .ok()
+                                .and_then(|guard| guard.clone())
+                                .unwrap_or(download_dir);
+
                             window
                                 .dialog()
                                 .file()
                                 .add_filter("All Files", &["*"])
                                 .set_file_name(&filename)
-                                .set_directory(&download_dir)
+                                .set_directory(&default_dir)
                                 .save_file(move |file_path| {
                                     let _ = tx.send(file_path);
                                 });
@@ -473,6 +486,13 @@ fn build_window(
                                 Ok(Some(chosen_path)) => {
                                     if let Some(path) = chosen_path.as_path() {
                                         *destination = path.to_path_buf();
+
+                                        // Remember the directory for next time
+                                        if let Some(parent) = path.parent() {
+                                            if let Ok(mut guard) = LAST_DOWNLOAD_DIR.lock() {
+                                                *guard = Some(parent.to_path_buf());
+                                            }
+                                        }
                                     }
                                 }
                                 Ok(None) | Err(_) => {
