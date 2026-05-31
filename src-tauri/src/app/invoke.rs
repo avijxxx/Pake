@@ -90,34 +90,24 @@ pub async fn download_file(app: AppHandle, params: DownloadFileParams) -> Result
         .download_dir()
         .map_err(|e| format!("Failed to get download dir: {}", e))?;
 
-    // Show save dialog using callback-based API with oneshot channel
-    // Use window.dialog() instead of app.dialog() to ensure dialog is shown on the correct window
-    let (tx, rx) = tokio::sync::oneshot::channel::<Option<FilePath>>();
+    // Try using blocking_save_file in a spawn_blocking to avoid blocking the async runtime
+    let filename = params.filename.clone();
+    let dir = download_dir.clone();
+    let dialog_handle = window.clone();
 
-    // Log to help debug dialog behavior
-    let debug_filename = params.filename.clone();
-    let debug_dir = download_dir.clone();
+    let file_path = tokio::task::spawn_blocking(move || {
+        dialog_handle
+            .dialog()
+            .file()
+            .add_filter("All Files", &["*"])
+            .set_file_name(&filename)
+            .set_directory(&dir)
+            .blocking_save_file()
+    })
+    .await
+    .map_err(|e| format!("Failed to spawn dialog task: {}", e))?;
 
-    window
-        .dialog()
-        .file()
-        .add_filter("All Files", &["*"])
-        .set_file_name(&params.filename)
-        .set_directory(&download_dir)
-        .save_file(move |file_path| {
-            // Write debug info to a file we can check
-            let debug_msg = format!(
-                "Dialog callback invoked!\nFilename: {}\nDirectory: {:?}\nResult: {:?}\n",
-                debug_filename, debug_dir, file_path
-            );
-            let _ = std::fs::write(
-                std::env::temp_dir().join("pake_dialog_debug.txt"),
-                debug_msg,
-            );
-            let _ = tx.send(file_path);
-        });
-
-    let Some(chosen_path) = rx.await.unwrap_or(None) else {
+    let Some(chosen_path) = file_path else {
         // User cancelled the dialog
         return Ok(());
     };
