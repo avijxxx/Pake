@@ -112,7 +112,7 @@ pub async fn download_file(app: AppHandle, params: DownloadFileParams) -> Result
             );
             let _ = std::fs::write(
                 std::env::temp_dir().join("pake_dialog_debug.txt"),
-                debug_msg
+                debug_msg,
             );
             let _ = tx.send(file_path);
         });
