@@ -5,6 +5,7 @@ use std::str::FromStr;
 use std::sync::atomic::{AtomicI64, Ordering};
 use tauri::http::Method;
 use tauri::{command, AppHandle, Manager, Url, WebviewWindow};
+use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_http::reqwest::{ClientBuilder, Request};
 
 #[cfg(target_os = "macos")]
@@ -84,21 +85,39 @@ pub struct NotificationParams {
 pub async fn download_file(app: AppHandle, params: DownloadFileParams) -> Result<(), String> {
     let window: WebviewWindow = app.get_webview_window("pake").ok_or("Window not found")?;
 
-    show_toast(
-        &window,
-        &get_download_message_with_lang(MessageType::Start, params.language.clone()),
-    );
-
     let download_dir = app
         .path()
         .download_dir()
         .map_err(|e| format!("Failed to get download dir: {}", e))?;
 
-    let output_path = download_dir.join(&params.filename);
+    let default_path = download_dir.join(&params.filename);
+
+    // Show save dialog for user to choose location (or cancel)
+    let file_path = app
+        .dialog()
+        .file()
+        .add_filter("All Files", &["*"])
+        .set_file_name(&params.filename)
+        .set_directory(download_dir)
+        .blocking_save_file();
+
+    let Some(chosen_path) = file_path else {
+        // User cancelled the dialog
+        return Ok(());
+    };
+
+    let output_path = chosen_path
+        .as_path()
+        .ok_or("Invalid save path")?
+        .to_path_buf();
 
     let path_str = output_path.to_str().ok_or("Invalid output path")?;
-
     let file_path = check_file_or_append(path_str);
+
+    show_toast(
+        &window,
+        &get_download_message_with_lang(MessageType::Start, params.language.clone()),
+    );
 
     let client = ClientBuilder::new()
         .build()
@@ -112,8 +131,8 @@ pub async fn download_file(app: AppHandle, params: DownloadFileParams) -> Result
 
     match response {
         Ok(mut res) => {
-            let mut file =
-                File::create(file_path).map_err(|e| format!("Failed to create file: {}", e))?;
+            let mut file = File::create(&file_path)
+                .map_err(|e| format!("Failed to create file: {}", e))?;
 
             while let Some(chunk) = res
                 .chunk()
