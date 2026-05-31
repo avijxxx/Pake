@@ -11,6 +11,7 @@ use tauri::{
     webview::{DownloadEvent, NewWindowFeatures, NewWindowResponse},
     AppHandle, Config, Manager, Url, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
 };
+use tauri_plugin_dialog::DialogExt;
 
 #[cfg(target_os = "macos")]
 use tauri::{Theme, TitleBarStyle};
@@ -434,12 +435,7 @@ fn build_window(
     }
 
     // Capture webview-initiated downloads (blob:, data:, Content-Disposition,
-    // etc.) and write them to the OS Downloads folder. This is essential for
-    // sites with a strict Content-Security-Policy (e.g. Gemini): their
-    // `connect-src` blocks Tauri's IPC origin, so downloads cannot be routed
-    // through the JS bridge, and downloads triggered from a sandboxed iframe
-    // can't reach the IPC either. Letting the browser download natively and
-    // catching it here is independent of the page CSP and the IPC channel.
+    // etc.) and show a save dialog for the user to choose the location.
     {
         let download_handle = app.clone();
         window_builder = window_builder.on_download(move |_webview, event| match event {
@@ -458,9 +454,32 @@ fn build_window(
                             })
                             .unwrap_or_else(|| "download".to_string());
 
-                        let target = download_dir.join(filename);
-                        if let Some(path_str) = target.to_str() {
-                            *destination = PathBuf::from(check_file_or_append(path_str));
+                        // Show save dialog using callback with blocking channel
+                        if let Some(window) = download_handle.get_webview_window("pake") {
+                            let (tx, rx) = std::sync::mpsc::channel();
+
+                            window
+                                .dialog()
+                                .file()
+                                .add_filter("All Files", &["*"])
+                                .set_file_name(&filename)
+                                .set_directory(&download_dir)
+                                .save_file(move |file_path| {
+                                    let _ = tx.send(file_path);
+                                });
+
+                            // Block waiting for user to choose or cancel
+                            match rx.recv() {
+                                Ok(Some(chosen_path)) => {
+                                    if let Some(path) = chosen_path.as_path() {
+                                        *destination = path.to_path_buf();
+                                    }
+                                }
+                                Ok(None) | Err(_) => {
+                                    // User cancelled or error - cancel the download
+                                    return false;
+                                }
+                            }
                         }
                     }
                     Err(error) => {
