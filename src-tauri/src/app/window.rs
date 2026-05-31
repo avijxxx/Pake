@@ -1,6 +1,7 @@
 use crate::app::config::PakeConfig;
 use crate::util::{get_data_dir, get_download_message_with_lang, show_toast, MessageType};
 use std::{
+    fs,
     path::PathBuf,
     str::FromStr,
     sync::{
@@ -16,6 +17,34 @@ use tauri_plugin_dialog::DialogExt;
 
 // Store the last download directory chosen by the user
 static LAST_DOWNLOAD_DIR: Mutex<Option<PathBuf>> = Mutex::new(None);
+
+fn get_last_download_dir_file(app: &AppHandle) -> Option<PathBuf> {
+    let package_name = app
+        .config()
+        .product_name
+        .clone()
+        .unwrap_or_else(|| "pake".to_string());
+    get_data_dir(app, package_name)
+        .ok()
+        .map(|dir| dir.join("last_download_dir.txt"))
+}
+
+fn load_last_download_dir(app: &AppHandle) -> Option<PathBuf> {
+    let file_path = get_last_download_dir_file(app)?;
+    let content = fs::read_to_string(file_path).ok()?;
+    let path = PathBuf::from(content.trim());
+    if path.exists() {
+        Some(path)
+    } else {
+        None
+    }
+}
+
+fn save_last_download_dir(app: &AppHandle, dir: &PathBuf) {
+    if let Some(file_path) = get_last_download_dir_file(app) {
+        let _ = fs::write(file_path, dir.to_string_lossy().as_bytes());
+    }
+}
 
 #[cfg(target_os = "macos")]
 use tauri::{Theme, TitleBarStyle};
@@ -467,6 +496,7 @@ fn build_window(
                                 .lock()
                                 .ok()
                                 .and_then(|guard| guard.clone())
+                                .or_else(|| load_last_download_dir(&download_handle))
                                 .unwrap_or(download_dir);
 
                             window
@@ -487,9 +517,11 @@ fn build_window(
 
                                         // Remember the directory for next time
                                         if let Some(parent) = path.parent() {
+                                            let parent_buf = parent.to_path_buf();
                                             if let Ok(mut guard) = LAST_DOWNLOAD_DIR.lock() {
-                                                *guard = Some(parent.to_path_buf());
+                                                *guard = Some(parent_buf.clone());
                                             }
+                                            save_last_download_dir(&download_handle, &parent_buf);
                                         }
                                     }
                                 }
