@@ -91,13 +91,15 @@ pub async fn download_file(app: AppHandle, params: DownloadFileParams) -> Result
         .map_err(|e| format!("Failed to get download dir: {}", e))?;
 
     // Show save dialog using callback-based API with oneshot channel
+    // Use window.dialog() instead of app.dialog() to ensure dialog is shown on the correct window
     let (tx, rx) = tokio::sync::oneshot::channel::<Option<FilePath>>();
 
     // Log to help debug dialog behavior
     let debug_filename = params.filename.clone();
     let debug_dir = download_dir.clone();
 
-    app.dialog()
+    window
+        .dialog()
         .file()
         .add_filter("All Files", &["*"])
         .set_file_name(&params.filename)
