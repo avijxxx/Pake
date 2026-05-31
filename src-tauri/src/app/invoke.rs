@@ -3,9 +3,11 @@ use std::fs::File;
 use std::io::Write;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::mpsc;
 use tauri::http::Method;
 use tauri::{command, AppHandle, Manager, Url, WebviewWindow};
 use tauri_plugin_dialog::DialogExt;
+use tauri_plugin_dialog::FilePath;
 use tauri_plugin_http::reqwest::{ClientBuilder, Request};
 
 #[cfg(target_os = "macos")]
@@ -93,16 +95,17 @@ pub async fn download_file(app: AppHandle, params: DownloadFileParams) -> Result
     let default_path = download_dir.join(&params.filename);
 
     // Show save dialog for user to choose location (or cancel)
-    let file_path = app
-        .dialog()
+    let (tx, rx) = mpsc::channel::<Option<FilePath>>();
+    app.dialog()
         .file()
         .add_filter("All Files", &["*"])
         .set_file_name(&params.filename)
         .set_directory(&download_dir)
-        .save_file(&window)
-        .await;
+        .save_file(move |file_path| {
+            let _ = tx.send(file_path);
+        });
 
-    let Some(chosen_path) = file_path.map_err(|e| format!("Dialog error: {}", e))? else {
+    let Some(chosen_path) = rx.recv().unwrap_or(None) else {
         // User cancelled the dialog
         return Ok(());
     };
