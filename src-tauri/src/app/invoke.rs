@@ -98,10 +98,11 @@ pub async fn download_file(app: AppHandle, params: DownloadFileParams) -> Result
         .file()
         .add_filter("All Files", &["*"])
         .set_file_name(&params.filename)
-        .set_directory(download_dir)
-        .blocking_save_file();
+        .set_directory(&download_dir)
+        .save_file()
+        .await;
 
-    let Some(chosen_path) = file_path else {
+    let Some(chosen_path) = file_path.map_err(|e| format!("Dialog error: {}", e))? else {
         // User cancelled the dialog
         return Ok(());
     };
