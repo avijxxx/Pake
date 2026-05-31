@@ -4,7 +4,20 @@
   "description": "Capability for the pake app.",
   "webviews": ["pake"],
   "remote": {
-    "urls": ["https://*.*", "https://*.*:*", "https://*.*.*", "https://*.*.*:*", "https://*.*.*.*", "https://*.*.*.*:*", "http://*.*", "http://*.*:*", "http://*.*.*", "http://*.*.*:*", "http://*.*.*.*", "http://*.*.*.*:*"]
+    "urls": [
+      "https://*.*",
+      "https://*.*:*",
+      "https://*.*.*",
+      "https://*.*.*:*",
+      "https://*.*.*.*",
+      "https://*.*.*.*:*",
+      "http://*.*",
+      "http://*.*:*",
+      "http://*.*.*",
+      "http://*.*.*:*",
+      "http://*.*.*.*",
+      "http://*.*.*.*:*"
+    ]
   },
   "permissions": [
     "shell:allow-open",
