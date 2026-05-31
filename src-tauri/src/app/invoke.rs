@@ -90,30 +90,18 @@ pub async fn download_file(app: AppHandle, params: DownloadFileParams) -> Result
         .download_dir()
         .map_err(|e| format!("Failed to get download dir: {}", e))?;
 
-    // --- DEBUG: confirm we reached this point ---
-    let _ = std::fs::write(
-        std::env::temp_dir().join("pake_debug.log"),
-        format!(
-            "download_file called: url={} file={} dir={:?}\n",
-            params.url, params.filename, download_dir
-        ),
-    );
-
-    // Show save dialog (requires `blocking` feature on tauri-plugin-dialog)
+    // Show save dialog asynchronously
     let file_path = app
         .dialog()
         .file()
         .add_filter("All Files", &["*"])
         .set_file_name(&params.filename)
         .set_directory(&download_dir)
-        .blocking_save_file();
+        .save_file()
+        .await;
 
     let Some(chosen_path) = file_path else {
-        // User cancelled
-        let _ = std::fs::write(
-            std::env::temp_dir().join("pake_debug.log"),
-            "dialog cancelled\n",
-        );
+        // User cancelled the dialog
         return Ok(());
     };
 
