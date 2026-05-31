@@ -90,26 +90,29 @@ pub async fn download_file(app: AppHandle, params: DownloadFileParams) -> Result
         .download_dir()
         .map_err(|e| format!("Failed to get download dir: {}", e))?;
 
-    // Try using blocking_save_file in a spawn_blocking to avoid blocking the async runtime
-    let filename = params.filename.clone();
-    let dir = download_dir.clone();
-    let dialog_handle = window.clone();
+    // Use callback-based save_file with oneshot channel
+    let (tx, rx) = tokio::sync::oneshot::channel::<Option<FilePath>>();
 
-    let file_path = tokio::task::spawn_blocking(move || {
-        dialog_handle
-            .dialog()
-            .file()
-            .add_filter("All Files", &["*"])
-            .set_file_name(&filename)
-            .set_directory(&dir)
-            .blocking_save_file()
-    })
-    .await
-    .map_err(|e| format!("Failed to spawn dialog task: {}", e))?;
+    window
+        .dialog()
+        .file()
+        .add_filter("All Files", &["*"])
+        .set_file_name(&params.filename)
+        .set_directory(&download_dir)
+        .save_file(move |file_path| {
+            let _ = tx.send(file_path);
+        });
 
-    let Some(chosen_path) = file_path else {
-        // User cancelled the dialog
-        return Ok(());
+    // Wait for user to choose a path or cancel
+    let chosen_path = match rx.await {
+        Ok(Some(path)) => path,
+        Ok(None) => {
+            // User cancelled the dialog
+            return Ok(());
+        }
+        Err(_) => {
+            return Err("Dialog was closed unexpectedly".to_string());
+        }
     };
 
     let output_path = chosen_path
