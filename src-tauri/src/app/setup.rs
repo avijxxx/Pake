@@ -171,14 +171,11 @@ pub fn set_global_shortcut(
                         }
                     }
 
+                    #[cfg(debug_assertions)]
                     if let Some(ref sc) = devtools_sc {
                         if sc.eq(event) {
-                            if let Some(window) = app.get_webview_window("pake") {
-                                if window.is_devtools_open() {
-                                    let _ = window.close_devtools();
-                                } else {
-                                    window.open_devtools();
-                                }
+                            if let Some(webview) = app.get_webview_window("pake") {
+                                let _ = webview.open_devtools();
                             }
                         }
                     }

@@ -1,7 +1,5 @@
 use crate::app::config::PakeConfig;
-use crate::util::{
-    check_file_or_append, get_data_dir, get_download_message_with_lang, show_toast, MessageType,
-};
+use crate::util::{get_data_dir, get_download_message_with_lang, show_toast, MessageType};
 use std::{
     path::PathBuf,
     str::FromStr,
