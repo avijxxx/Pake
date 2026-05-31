@@ -3,7 +3,6 @@ use std::fs::File;
 use std::io::Write;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicI64, Ordering};
-use std::sync::mpsc;
 use tauri::http::Method;
 use tauri::{command, AppHandle, Manager, Url, WebviewWindow};
 use tauri_plugin_dialog::DialogExt;
@@ -95,7 +94,7 @@ pub async fn download_file(app: AppHandle, params: DownloadFileParams) -> Result
     let default_path = download_dir.join(&params.filename);
 
     // Show save dialog for user to choose location (or cancel)
-    let (tx, rx) = mpsc::channel::<Option<FilePath>>();
+    let (tx, rx) = tokio::sync::oneshot::channel::<Option<FilePath>>();
     app.dialog()
         .file()
         .add_filter("All Files", &["*"])
@@ -105,7 +104,7 @@ pub async fn download_file(app: AppHandle, params: DownloadFileParams) -> Result
             let _ = tx.send(file_path);
         });
 
-    let Some(chosen_path) = rx.recv().unwrap_or(None) else {
+    let Some(chosen_path) = rx.await.unwrap_or(None) else {
         // User cancelled the dialog
         return Ok(());
     };
