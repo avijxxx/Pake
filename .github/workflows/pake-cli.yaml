@@ -152,7 +152,7 @@ jobs:
             "      var d = document.createElement('div');",
             "      d.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#c0392b;color:#fff;z-index:2147483647;padding:10px;font:13px monospace;line-height:1.6';",
             "      d.textContent = '[Pake] auto-login failed after ' + attempts + ' polls. Found: username=' + !!u + ' password=' + !!p + ' submit=' + !!btn + '. Selectors: US=' + (US||'(auto)') + ' PS=' + (PS||'(auto)') + ' BS=' + (BS||'(auto)');",
-            "      document.body.appendChild(d);
+            "      document.body.appendChild(d);",
             "    }",
             "  }, 500);",
             "})();"
