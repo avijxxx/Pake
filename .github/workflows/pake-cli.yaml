@@ -72,6 +72,11 @@ on:
         required: false
         type: boolean
         default: false
+      force_internal_navigation:
+        description: "Keep all links inside the app (don't open external browser)"
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -194,6 +199,10 @@ jobs:
             ARGS+=("--debug")
           fi
 
+          if [ "${{ inputs.force_internal_navigation }}" == "true" ]; then
+            ARGS+=("--force-internal-navigation")
+          fi
+
           if [ -n "${{ inputs.targets }}" ] && [ "${{ runner.os }}" == "Linux" ]; then
             ARGS+=("--targets" "${{ inputs.targets }}")
           fi
@@ -230,6 +239,10 @@ jobs:
 
           if ("${{ inputs.debug }}" -eq "true") {
             $args += "--debug"
+          }
+
+          if ("${{ inputs.force_internal_navigation }}" -eq "true") {
+            $args += "--force-internal-navigation"
           }
 
           Write-Host "Running: node dist/cli.js $($args -join ' ')"
