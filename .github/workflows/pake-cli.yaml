@@ -10,7 +10,7 @@ on:
       platform:
         description: "Platform"
         required: true
-        default: "macos-latest"
+        default: "windows-latest"
         type: choice
         options:
           - "windows-latest"
@@ -28,11 +28,11 @@ on:
       width:
         description: "Window width (px)"
         required: false
-        default: "1200"
+        default: "380"
       height:
         description: "Window height (px)"
         required: false
-        default: "780"
+        default: "680"
       fullscreen:
         description: "Start in fullscreen mode"
         required: false
@@ -76,7 +76,7 @@ on:
         description: "Keep all links inside the app (don't open external browser)"
         required: false
         type: boolean
-        default: false
+        default: true
 
 jobs:
   build:

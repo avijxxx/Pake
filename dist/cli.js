@@ -672,11 +672,11 @@ async function injectCustomCode(options, tauriConf) {
             return;
         }
         const files = injectArray.map((filepath) => path.isAbsolute(filepath) ? filepath : path.join(process.cwd(), filepath));
-        tauriConf.pake.inject = files;
+        tauriConf.pake.inject = [...(tauriConf.pake.inject || []), ...files];
         await combineFiles(files, injectFilePath);
     }
     else {
-        tauriConf.pake.inject = [];
+        tauriConf.pake.inject = tauriConf.pake.inject || [];
         await fsExtra.writeFile(injectFilePath, '');
     }
     tauriConf.pake.proxy_url = proxyUrl || '';
