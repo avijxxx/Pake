@@ -131,8 +131,8 @@ pub async fn download_file(app: AppHandle, params: DownloadFileParams) -> Result
 
     match response {
         Ok(mut res) => {
-            let mut file = File::create(&file_path)
-                .map_err(|e| format!("Failed to create file: {}", e))?;
+            let mut file =
+                File::create(&file_path).map_err(|e| format!("Failed to create file: {}", e))?;
 
             while let Some(chunk) = res
                 .chunk()
