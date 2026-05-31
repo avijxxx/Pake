@@ -99,7 +99,7 @@ pub async fn download_file(app: AppHandle, params: DownloadFileParams) -> Result
         .add_filter("All Files", &["*"])
         .set_file_name(&params.filename)
         .set_directory(&download_dir)
-        .save_file()
+        .save_file(&window)
         .await;
 
     let Some(chosen_path) = file_path.map_err(|e| format!("Dialog error: {}", e))? else {
