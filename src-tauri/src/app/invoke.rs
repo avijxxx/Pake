@@ -92,12 +92,26 @@ pub async fn download_file(app: AppHandle, params: DownloadFileParams) -> Result
 
     // Show save dialog using callback-based API with oneshot channel
     let (tx, rx) = tokio::sync::oneshot::channel::<Option<FilePath>>();
+
+    // Log to help debug dialog behavior
+    let debug_filename = params.filename.clone();
+    let debug_dir = download_dir.clone();
+
     app.dialog()
         .file()
         .add_filter("All Files", &["*"])
         .set_file_name(&params.filename)
         .set_directory(&download_dir)
         .save_file(move |file_path| {
+            // Write debug info to a file we can check
+            let debug_msg = format!(
+                "Dialog callback invoked!\nFilename: {}\nDirectory: {:?}\nResult: {:?}\n",
+                debug_filename, debug_dir, file_path
+            );
+            let _ = std::fs::write(
+                std::env::temp_dir().join("pake_dialog_debug.txt"),
+                debug_msg
+            );
             let _ = tx.send(file_path);
         });
 
