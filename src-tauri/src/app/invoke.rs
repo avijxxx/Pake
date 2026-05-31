@@ -5,7 +5,7 @@ use std::str::FromStr;
 use std::sync::atomic::{AtomicI64, Ordering};
 use tauri::http::Method;
 use tauri::{command, AppHandle, Manager, Url, WebviewWindow};
-use tauri_plugin_dialog::DialogExt;
+use tauri_plugin_dialog::{DialogExt, FilePath};
 use tauri_plugin_http::reqwest::{ClientBuilder, Request};
 
 #[cfg(target_os = "macos")]
@@ -90,17 +90,18 @@ pub async fn download_file(app: AppHandle, params: DownloadFileParams) -> Result
         .download_dir()
         .map_err(|e| format!("Failed to get download dir: {}", e))?;
 
-    // Show save dialog asynchronously
-    let file_path = app
-        .dialog()
+    // Show save dialog using callback-based API with oneshot channel
+    let (tx, rx) = tokio::sync::oneshot::channel::<Option<FilePath>>();
+    app.dialog()
         .file()
         .add_filter("All Files", &["*"])
         .set_file_name(&params.filename)
         .set_directory(&download_dir)
-        .save_file()
-        .await;
+        .save_file(move |file_path| {
+            let _ = tx.send(file_path);
+        });
 
-    let Some(chosen_path) = file_path else {
+    let Some(chosen_path) = rx.await.unwrap_or(None) else {
         // User cancelled the dialog
         return Ok(());
     };
