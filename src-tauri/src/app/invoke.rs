@@ -6,7 +6,6 @@ use std::sync::atomic::{AtomicI64, Ordering};
 use tauri::http::Method;
 use tauri::{command, AppHandle, Manager, Url, WebviewWindow};
 use tauri_plugin_dialog::DialogExt;
-use tauri_plugin_dialog::FilePath;
 use tauri_plugin_http::reqwest::{ClientBuilder, Request};
 
 #[cfg(target_os = "macos")]
@@ -91,21 +90,30 @@ pub async fn download_file(app: AppHandle, params: DownloadFileParams) -> Result
         .download_dir()
         .map_err(|e| format!("Failed to get download dir: {}", e))?;
 
-    let default_path = download_dir.join(&params.filename);
+    // --- DEBUG: confirm we reached this point ---
+    let _ = std::fs::write(
+        std::env::temp_dir().join("pake_debug.log"),
+        format!(
+            "download_file called: url={} file={} dir={:?}\n",
+            params.url, params.filename, download_dir
+        ),
+    );
 
-    // Show save dialog for user to choose location (or cancel)
-    let (tx, rx) = tokio::sync::oneshot::channel::<Option<FilePath>>();
-    app.dialog()
+    // Show save dialog (requires `blocking` feature on tauri-plugin-dialog)
+    let file_path = app
+        .dialog()
         .file()
         .add_filter("All Files", &["*"])
         .set_file_name(&params.filename)
         .set_directory(&download_dir)
-        .save_file(move |file_path| {
-            let _ = tx.send(file_path);
-        });
+        .blocking_save_file();
 
-    let Some(chosen_path) = rx.await.unwrap_or(None) else {
-        // User cancelled the dialog
+    let Some(chosen_path) = file_path else {
+        // User cancelled
+        let _ = std::fs::write(
+            std::env::temp_dir().join("pake_debug.log"),
+            "dialog cancelled\n",
+        );
         return Ok(());
     };
 
