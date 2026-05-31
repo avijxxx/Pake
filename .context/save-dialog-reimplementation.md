@@ -1,6 +1,7 @@
 # Save Dialog 功能重新实现
 
 ## 日期
+
 2026-05-31
 
 ## 改动概述
@@ -12,6 +13,7 @@
 ### 1. `src-tauri/src/app/invoke.rs`
 
 **改动前（blocking 方式）：**
+
 ```rust
 // Show save dialog (requires `blocking` feature on tauri-plugin-dialog)
 let file_path = app
@@ -24,6 +26,7 @@ let file_path = app
 ```
 
 **改动后（异步方式）：**
+
 ```rust
 // Show save dialog asynchronously
 let file_path = app
@@ -37,24 +40,28 @@ let file_path = app
 ```
 
 **其他清理：**
+
 - 移除了临时的 debug 日志代码
 - 简化了取消对话框的处理逻辑
 
 ### 2. `src-tauri/Cargo.toml`
 
 **改动前：**
+
 ```toml
 tokio = { version = "1.49.0", features = ["time", "sync"] }
 tauri-plugin-dialog = { version = "2", features = ["blocking"] }
 ```
 
 **改动后：**
+
 ```toml
 tokio = { version = "1.49.0", features = ["time"] }
 tauri-plugin-dialog = "2"
 ```
 
 **说明：**
+
 - 移除了 `tauri-plugin-dialog` 的 `blocking` feature
 - 移除了 `tokio` 的 `sync` feature（代码中未使用）
 
