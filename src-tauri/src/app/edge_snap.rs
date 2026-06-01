@@ -18,9 +18,9 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use crate::app::config::WindowConfig;
 
 const HOT_ZONE_PX: i32 = 10;
-const EXPAND_ANIMATION_MS: u64 = 200;
-const SNAP_ANIMATION_MS: u64 = 150;
-const MOUSE_LEAVE_DELAY_MS: u64 = 500;
+const EXPAND_ANIMATION_MS: u64 = 100;
+const SNAP_ANIMATION_MS: u64 = 100;
+const MOUSE_LEAVE_DELAY_MS: u64 = 100;
 const CURSOR_POLL_INTERVAL_MS: u64 = 33;
 const ANIMATION_TICK_MS: u64 = 16;
 
