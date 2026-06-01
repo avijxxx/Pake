@@ -397,6 +397,9 @@ async fn expand_from_edge(
         Ease::Out,
     )
     .await;
+    // Bring the window to the front so it appears above other windows.
+    let _ = window.show();
+    let _ = window.set_focus();
     Ok(())
 }
 
