@@ -132,6 +132,7 @@ jobs:
           const btnSel  = '${{ inputs.login_button_selector }}'   || '';
           pake.inject = [
             "(function() {",
+            "  if (!/login/i.test(location.href)) return;",
             "  if (sessionStorage.__pake_skip) return;",
             "  var U = '" + user + "';",
             "  var P = '" + pass + "';",
