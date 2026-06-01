@@ -337,8 +337,7 @@ fn build_window(
     // work. Without joining, each array element is injected as its own
     // <script>, which breaks scripts constructed as individual lines.
     if !config.inject.is_empty() {
-        window_builder = window_builder
-            .initialization_script(config.inject.join("\n"));
+        window_builder = window_builder.initialization_script(config.inject.join("\n"));
     }
 
     #[cfg(target_os = "windows")]
