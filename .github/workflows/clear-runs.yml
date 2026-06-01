@@ -1,0 +1,20 @@
+name: Clear Workflow Runs
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+jobs:
+  clear:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete all workflow runs
+        run: |
+          gh run list --limit 200 --json databaseId --jq '.[].databaseId' | while read id; do
+            echo "Deleting run $id"
+            gh run delete "$id"
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}
