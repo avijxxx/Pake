@@ -157,7 +157,7 @@ jobs:
             "      nativeInputValueSetter.call(u, U); u.dispatchEvent(new Event('input', { bubbles: true }));",
             "      nativeInputValueSetter.call(p, P); p.dispatchEvent(new Event('input', { bubbles: true }));",
             "      btn.style.outline = '3px solid red';",
-            "      setTimeout(function() { btn.click(); }, 500);",
+            "      setTimeout(function() { btn.click(); }, 200);",
             "    } else if (attempts >= 30) {",
             "      clearInterval(timer);",
             "      var d = document.createElement('div');",
