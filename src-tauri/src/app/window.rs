@@ -333,8 +333,12 @@ fn build_window(
         .initialization_script(include_str!("../inject/custom.js"));
 
     // Inject custom scripts from pake.json (e.g., auto-login)
-    for script in &config.inject {
-        window_builder = window_builder.initialization_script(script);
+    // Join all scripts into a single block so multi-line IIFE scripts
+    // work. Without joining, each array element is injected as its own
+    // <script>, which breaks scripts constructed as individual lines.
+    if !config.inject.is_empty() {
+        window_builder = window_builder
+            .initialization_script(config.inject.join("\n"));
     }
 
     #[cfg(target_os = "windows")]
